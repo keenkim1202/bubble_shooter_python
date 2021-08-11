@@ -1,19 +1,21 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 천장 충돌 처리
+# 버블 터트리기
 import os, random, math
 import pygame
 from pygame import image
 
 # 버블 클래스 생성
 class Bubble(pygame.sprite.Sprite):
-    def __init__(self, image, color, position = (0, 0)):
+    def __init__(self, image, color, position = (0, 0),  row_idx = -1, col_idx = -1):
         super().__init__()
         self.image = image
         self.color = color
         self.rect = image.get_rect(center=position)
         self.radius = 18 # 발사속도
+        self.row_idx = row_idx
+        self.col_idx = col_idx
 
     def set_rect(self, position):
         self.rect = self.image.get_rect(center=position)
@@ -34,6 +36,11 @@ class Bubble(pygame.sprite.Sprite):
 
         if self.rect.left < 0 or self.rect.right > screen_width:
             self.set_angle(180 - self.angle)
+
+    # current bubble이 충돌해서 어느 위치에 들어갔을 때, 맵을 기준으로 어느 위치에 넣어주어야할지 알 수 있다.
+    def set_map_index(self, row_idx, col_idx):
+        self.row_idx = row_idx
+        self.col_idx = col_idx
 
 # 발사대 클래스 생성
 class Pointer(pygame.sprite.Sprite):
@@ -87,7 +94,7 @@ def setup():
                 
             position = get_bubble_position(row_idx, col_idx)
             image = get_bubble_image(col)
-            bubble_group.add(Bubble(image, col, position))
+            bubble_group.add(Bubble(image, col, position, row_idx, col_idx))
 
 # 버블의 위치 정보를 구하는 함수
 def get_bubble_position(row_idx, col_idx):
@@ -150,6 +157,7 @@ def process_collision():
         row_idx, col_idx = get_map_index(*curr_bubble.rect.center) # (x, y)
         print(row_idx, col_idx)
         place_bubble(curr_bubble, row_idx, col_idx)
+        remove_adjacent_bubbles(row_idx, col_idx, curr_bubble.color)
         curr_bubble = None
         fire = False
 
@@ -173,7 +181,67 @@ def place_bubble(bubble, row_idx, col_idx):
     map[row_idx][col_idx] = bubble.color
     position = get_bubble_position(row_idx, col_idx)
     bubble.set_rect(position)
+    bubble.set_map_index(row_idx, col_idx)
     bubble_group.add(bubble)
+
+# dfs를 이용하여 같은 색깔 버블들의 개수를 세어 터트리기!
+def remove_adjacent_bubbles(row_idx, col_idx, color):
+    visited.clear()
+    visit(row_idx, col_idx, color)
+    # 연속된 버블이 3개 이상이면 없애기
+    if len(visited) >= 3:
+        remove_visited_bubbles()
+        remove_hanging_bubbles()
+
+def visit(row_idx, col_idx, color = None):
+    # 맵의 범위를 벗어는지 확인
+    if row_idx < 0 or row_idx >= MAP_ROW_COUNT or col_idx < 0 or col_idx >= MAP_COL_COUNT:
+        return
+    # 현재 cell의 색상이 color와 같은지 확인
+    if color and map[row_idx][col_idx] != color:
+        return
+    # 버블이 빈 공간이거나, 존재할 수 없는 위치인지 확인 -> 방문하지 않음
+    if map[row_idx][col_idx] in [".", "/"]:
+        return
+    # 이미 방문 여부를 확인
+    if (row_idx, col_idx) in visited:
+        return
+    #  방문 처리
+    visited.append((row_idx, col_idx))
+
+    # 현재 위치를 기준으로 방문 가능한 좌표 정보
+    rows = [0, -1, -1, 0, 1, 1]
+    cols = [-1, -1, 0, 1, 0, -1]
+
+    if row_idx % 2 == 1:
+        rows = [0, -1, -1, 0, 1, 1]
+        cols = [-1, 0, 1, 1, 1, 0]
+    
+    for i in range(len(rows)):
+        visit(row_idx + rows[i], col_idx + cols[i], color)
+
+def remove_visited_bubbles():
+    # 버블들 중에서 방문한 곳 위치와 똑같은 위치(row_idx, col_idx)에 있는 버블만 지워주면 된다.
+    # bubble group중 row_idx와 col_idx가 visited에 있는 것들을 가져온다.
+    bubbles_to_remove = [b for b in bubble_group if (b.row_idx, b.col_idx) in visited]
+    for bubble in bubbles_to_remove:
+        map[bubble.row_idx][bubble.col_idx] = "."
+        bubble_group.remove(bubble)
+
+# 방문하지 않은 버블, 즉 공중에 떠인는 버블들을 지우기
+def remove_not_visited_bubbles():
+    bubbles_to_remove = [b for b in bubble_group if (b.row_idx, b.col_idx) not in visited]
+    for bubble in bubbles_to_remove:
+        map[bubble.row_idx][bubble.col_idx] = "."
+        bubble_group.remove(bubble)
+    
+# 지워진 버블에 붙어있던 버블 없애기. (천장과 연결되어있지 않고 떠있는 버블들 처리)
+def remove_hanging_bubbles():
+    visited.clear()
+    for col_idx in range(MAP_COL_COUNT):
+        if map[0][col_idx] != ".":
+            visit(0, col_idx)
+    remove_not_visited_bubbles()
 
 pygame.init()
 
@@ -220,6 +288,7 @@ next_bubble = None # 다음에 쏠 버블
 fire = False # 발사 여부 (현재 버블이 발사 중이면 발사되지 않도록하기 위해서.)
 
 map = [] # 게임 맵
+visited = []
 bubble_group = pygame.sprite.Group()
 
 # 함수 호출
@@ -248,7 +317,6 @@ while running:
         
         # 위를 눌렀을 떄는 화살표의 이동이 멈춰야 하는 부분 설정
         if event.type == pygame.KEYUP:
-            # 좌측 혹은 우측 방향키에서 손을 때었을 때
             if event.key == pygame.K_LEFT:
                 to_angle_left = 0
             elif event.key == pygame.K_RIGHT:
