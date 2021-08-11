@@ -1,7 +1,7 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 다음에 쏠 버블 정의하기
+# 버블 충돌 처리
 import os, random, math
 import pygame
 from pygame import image
@@ -27,7 +27,7 @@ class Bubble(pygame.sprite.Sprite):
     
     def move(self):
         to_x = self.radius * math.cos(self.rad_angle)
-        to_y = self.radius * math.sin(self.rad_angle) * -1 # 방향을 위로 하기 위해서 -1 곱해주기.
+        to_y = self.radius * math.sin(self.rad_angle) * -1
 
         self.rect.x += to_x
         self.rect.y += to_y
@@ -57,9 +57,7 @@ class Pointer(pygame.sprite.Sprite):
         elif self.angle < 10:
             self.angle = 10
 
-        # 원본 이미지를 변하는 각도정보를 반영하여 original 이미지를 업데이트해준다.
         self.image = pygame.transform.rotozoom(self.original_image, self.angle, 1)
-        # image의 중심 좌표를 고정하여 center를 기준으로 회전되도록.
         self.rect = self.image.get_rect(center = self.position)
 
 # 맵 만들기
@@ -84,7 +82,7 @@ def setup():
     # 버블 만들어 넣기.
     for row_idx, row in enumerate(map):
         for col_idx, col in enumerate(row):
-            if col in [".", "/"]: # 버블이 없어야 하는 원소이면 continue.
+            if col in [".", "/"]:
                 continue
                 
             position = get_bubble_position(row_idx, col_idx)
@@ -96,7 +94,6 @@ def get_bubble_position(row_idx, col_idx):
     pos_x = col_idx * CELL_SIZE + (BUBBLE_WIDTH // 2)
     pos_y = row_idx * CELL_SIZE + (BUBBLE_HEIGHT // 2)
 
-    # 짝수번쨰 줄은 홀수본째 줄보다 약간 치우져 있는 모양이므로, CELL_SIZE의 반만큼 옮겨준다.
     if row_idx % 2 == 1:
         pos_x += CELL_SIZE // 2
     return pos_x, pos_y
@@ -123,7 +120,7 @@ def prepare_bubbles():
     if next_bubble:
         curr_bubble = next_bubble
     else:
-        curr_bubble = create_bubble() # 새 버블 생성 함수
+        curr_bubble = create_bubble()
 
     curr_bubble.set_rect((screen_width // 2, 624))
     next_bubble = create_bubble()
@@ -178,8 +175,6 @@ BUBBLE_WIDTH = 56
 BUBBLE_HEIGHT = 62
 
 # 화살표 관련 변수
-# to_angle = 0 # 좌우 각도 정보
-# 키 이벤트가 들어오는 속도가 빠를 때를 대응하기 위해서 좌우의 각도 변수를 나눈다.
 to_angle_left = 0 # 좌측 각도 정보
 to_angle_right = 0 # 우측 각도 정보
 angle_speed = 1.5 # 1.5도씩 움직이게 된다.
@@ -194,27 +189,28 @@ bubble_group = pygame.sprite.Group()
 # 함수 호출
 setup()
 
-running = True # running이 true일 동안은 계속 게임이 실행
+# 게임 실행 관련
+running = True
 
 while running:
-    clock.tick(60) # FPS 60으로 설정
+    clock.tick(60)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-            # 방향키에 따른 이벤트 생성
+        # 방향키에 따른 이벤트 생성
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT: # 좌측키 -> 화살표 각도가 점점 증가함.
+            if event.key == pygame.K_LEFT: # 화살표 각도 증가
                 to_angle_left += angle_speed
-            elif event.key == pygame.K_RIGHT: # 우측키 -> 화살표 각도가 점점 감소함.
+            elif event.key == pygame.K_RIGHT: # 화살표 각도 감소
                 to_angle_right -= angle_speed
-            elif event.key == pygame.K_SPACE: # 스페이스 -> 버블 발사
+            elif event.key == pygame.K_SPACE: # 버블 발사
                 if curr_bubble and not fire:
                     fire = True
                     curr_bubble.set_angle(pointer.angle)
         
-        # 위를 눌렀을 떄는 화살표의 이동이 멈춰야 하는 부분 설정.
+        # 위를 눌렀을 떄는 화살표의 이동이 멈춰야 하는 부분 설정
         if event.type == pygame.KEYUP:
             # 좌측 혹은 우측 방향키에서 손을 때었을 때
             if event.key == pygame.K_LEFT:
