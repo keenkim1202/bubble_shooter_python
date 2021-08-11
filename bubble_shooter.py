@@ -1,7 +1,11 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 버블 터트리기
+# 벽 내리기
+# 총 7번의 기회가 주어지고, 
+# - 기회가 2번남으면 화면이 조금 흔들린다.
+# - 기회가 1번 남으면 화면이 많이 흔들린다.
+# - 기회를 다 쓰면 벽이 내려온다.
 import os, random, math
 import pygame
 from pygame import image
@@ -20,8 +24,11 @@ class Bubble(pygame.sprite.Sprite):
     def set_rect(self, position):
         self.rect = self.image.get_rect(center=position)
 
-    def draw(self, screen):
-        screen.blit(self.image, self.rect)
+    def draw(self, screen, to_x = None):
+        if to_x:
+            screen.blit(self.image, (self.rect.x + to_x, self.rect.y))
+        else:
+            screen.blit(self.image, self.rect)
 
     def set_angle(self, angle):
         self.angle = angle
@@ -150,7 +157,7 @@ def get_random_bubble_color():
 
 # 충돌 처리 함수
 def process_collision():
-    global curr_bubble, fire
+    global curr_bubble, fire, curr_fire_count
     hit_bubble = pygame.sprite.spritecollideany(curr_bubble, bubble_group, pygame.sprite.collide_mask)
 
     if hit_bubble or curr_bubble.rect.top <= 0:
@@ -160,6 +167,7 @@ def process_collision():
         remove_adjacent_bubbles(row_idx, col_idx, curr_bubble.color)
         curr_bubble = None
         fire = False
+        curr_fire_count -= 1
 
 # 맵에서의 위치정보를 가져오는 함수
 def get_map_index(x, y):
@@ -243,6 +251,17 @@ def remove_hanging_bubbles():
             visit(0, col_idx)
     remove_not_visited_bubbles()
 
+# 버블을 그려주고, 흔들리는 모션을 표현하기
+def draw_bubbles():
+    to_x = None
+    if curr_fire_count == 2:
+        to_x = random.randint(0, 2) - 1 # -1 ~ 1
+    elif curr_fire_count == 1:
+        to_x = random.randint(0, 8) - 4 # -4 ~ 4
+
+    for bubble in bubble_group:
+        bubble.draw(screen, to_x)
+
 pygame.init()
 
 screen_width = 448
@@ -277,6 +296,7 @@ BUBBLE_WIDTH = 56
 BUBBLE_HEIGHT = 62
 MAP_ROW_COUNT = 11
 MAP_COL_COUNT = 8
+FIRE_COUNT = 7 # 발사 가능 횟수 ( 벽이 내려오기 전까지 )
 
 # 화살표 관련 변수
 to_angle_left = 0 # 좌측 각도 정보
@@ -286,6 +306,7 @@ angle_speed = 1.5 # 1.5도씩 움직이게 된다.
 curr_bubble = None # 이번에 쏠 버블
 next_bubble = None # 다음에 쏠 버블
 fire = False # 발사 여부 (현재 버블이 발사 중이면 발사되지 않도록하기 위해서.)
+curr_fire_count = FIRE_COUNT # 현재 남은 발사 횟수
 
 map = [] # 게임 맵
 visited = []
@@ -330,6 +351,8 @@ while running:
 
     screen.blit(background, (0, 0))
     bubble_group.draw(screen)
+
+    draw_bubbles()
     pointer.rotate(to_angle_left + to_angle_right) # 발사대의 자연스러운 움직임을 위해서
     pointer.draw(screen)
 
