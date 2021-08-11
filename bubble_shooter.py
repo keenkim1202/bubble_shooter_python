@@ -1,9 +1,10 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 버블 이미지 설정 / map 설정
+# 발사대( 화살표 ) 생성
 import os
 import pygame
+from pygame import image
 
 # 버블 클래스 생성
 class Bubble(pygame.sprite.Sprite):
@@ -12,6 +13,16 @@ class Bubble(pygame.sprite.Sprite):
         self.image = image
         self.color = color
         self.rect = image.get_rect(center=position)
+
+# 발사대 클래스 생성
+class Pointer(pygame.sprite.Sprite):
+    def __init__(self, image, position):
+        super().__init__()
+        self.image = image
+        self.rect = image.get_rect(center=position)
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
 
 # 맵 만들기
 # / : 버블이 들어갈 수 없는 공간을 의미.
