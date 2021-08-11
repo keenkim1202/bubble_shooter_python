@@ -17,7 +17,7 @@ clock = pygame.time.Clock()
 
 # 배경 이미지 불러오기
 current_path = os.path.dirname(__file__)
-background = pygame.image.load(os.path.join(current_path, "background.png"))
+background = pygame.image.load(os.path.join(current_path, "./images/background.png"))
 
 running = True # running이 true일 동안은 계속 게임이 실행
 
