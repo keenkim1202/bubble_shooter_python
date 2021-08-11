@@ -1,7 +1,7 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 버블 충돌 처리
+# 천장 충돌 처리
 import os, random, math
 import pygame
 from pygame import image
@@ -146,7 +146,7 @@ def process_collision():
     global curr_bubble, fire
     hit_bubble = pygame.sprite.spritecollideany(curr_bubble, bubble_group, pygame.sprite.collide_mask)
 
-    if hit_bubble:
+    if hit_bubble or curr_bubble.rect.top <= 0:
         row_idx, col_idx = get_map_index(*curr_bubble.rect.center) # (x, y)
         print(row_idx, col_idx)
         place_bubble(curr_bubble, row_idx, col_idx)
@@ -269,10 +269,6 @@ while running:
         if fire:
             curr_bubble.move() # 발사상태면 버블이 이동하도록.
         curr_bubble.draw(screen)
-
-        if curr_bubble.rect.top <= 0: # 발사한 버블이 꼭대기에 닿으면 없어지고 새로운 버블이 생기도록.
-            curr_bubble = None
-            fire = False
 
     if next_bubble:
         next_bubble.draw(screen)
