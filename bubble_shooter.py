@@ -1,7 +1,7 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 발사대 겨냥 ( 방향키로 움직이기 )
+# 다음에 쏠 버블 정의하기
 import os, random, math
 import pygame
 from pygame import image
@@ -118,9 +118,16 @@ def get_bubble_image(color):
 
 # 쏠 버블에 대한 준비를 하는 함수
 def prepare_bubbles():
-    global curr_bubble
-    curr_bubble = create_bubble() # 새 버블 생성 함수
+    global curr_bubble, next_bubble
+
+    if next_bubble:
+        curr_bubble = next_bubble
+    else:
+        curr_bubble = create_bubble() # 새 버블 생성 함수
+
     curr_bubble.set_rect((screen_width // 2, 624))
+    next_bubble = create_bubble()
+    next_bubble.set_rect((screen_width // 4, 688))
 
 # 발사할 버블 랜덤으로 생성하는 함수
 def create_bubble():
@@ -178,6 +185,7 @@ to_angle_right = 0 # 우측 각도 정보
 angle_speed = 1.5 # 1.5도씩 움직이게 된다.
 
 curr_bubble = None # 이번에 쏠 버블
+next_bubble = None # 다음에 쏠 버블
 fire = False # 발사 여부 (현재 버블이 발사 중이면 발사되지 않도록하기 위해서.)
 
 map = [] # 게임 맵
@@ -230,7 +238,10 @@ while running:
         if curr_bubble.rect.top <= 0: # 발사한 버블이 꼭대기에 닿으면 없어지고 새로운 버블이 생기도록.
             curr_bubble = None
             fire = False
-            
+
+    if next_bubble:
+        next_bubble.draw(screen)
+
     pygame.display.update()
 
 pygame.quit()
