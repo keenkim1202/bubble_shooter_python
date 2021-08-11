@@ -44,7 +44,6 @@ def setup():
     ]
 
     # 버블 만들어 넣기.
-    # map에 문자열을 넣어줬으므로 2중for문으로 2차원으로 순회
     for row_idx, row in enumerate(map):
         for col_idx, col in enumerate(row):
             if col in [".", "/"]: # 버블이 없어야 하는 원소이면 continue.
@@ -77,8 +76,7 @@ def get_bubble_image(color):
     elif color == "P":
         return bubble_images[4]
     else:
-        return bubble_images[-1] # -1을 넣어주면 list의 가장 마지막 원소를 의미한다.
-    
+        return bubble_images[-1]
 
 pygame.init()
 
@@ -104,6 +102,10 @@ bubble_images = [
     pygame.image.load(os.path.join(current_path, "./images/black.png")).convert_alpha()
 ]
 
+# 발사대 이미지 불러오기
+pointer_image = pygame.image.load(os.path.join(current_path, "./images/pointer.png")) 
+pointer = Pointer(pointer_image, (screen_width // 2, 624))
+
 # 게임 관련 변수
 CELL_SIZE = 56
 BUBBLE_WIDTH = 56
@@ -124,7 +126,8 @@ while running:
             running = False
 
     screen.blit(background, (0, 0))
-    bubble_group.draw(screen) # bubble_group의 모든 원소를 screen에 그려준다.
+    bubble_group.draw(screen)
+    pointer.draw(screen)
     pygame.display.update()
 
 pygame.quit()
