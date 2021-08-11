@@ -1,7 +1,7 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 발사대( 화살표 ) 생성
+# 발사대 겨냥 ( 방향키로 움직이기 )
 import os
 import pygame
 from pygame import image
@@ -16,13 +16,30 @@ class Bubble(pygame.sprite.Sprite):
 
 # 발사대 클래스 생성
 class Pointer(pygame.sprite.Sprite):
-    def __init__(self, image, position):
+    def __init__(self, image, position, angle):
         super().__init__()
         self.image = image
         self.rect = image.get_rect(center=position)
+        self.angle = angle
+        self.original_image = image
+        self.position = position
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
+
+    def rotate(self, angle):
+        self.angle += angle
+
+        # 각도의 최소 최대값 고정
+        if self.angle > 170:
+            self.angle = 170
+        elif self.angle < 10:
+            self.angle = 10
+
+        # 원본 이미지를 변하는 각도정보를 반영하여 original 이미지를 업데이트해준다.
+        self.image = pygame.transform.rotozoom(self.original_image, self.angle, 1)
+        # image의 중심 좌표를 고정하여 center를 기준으로 회전되도록.
+        self.rect = self.image.get_rect(center = self.position)
 
 # 맵 만들기
 # / : 버블이 들어갈 수 없는 공간을 의미.
@@ -104,12 +121,20 @@ bubble_images = [
 
 # 발사대 이미지 불러오기
 pointer_image = pygame.image.load(os.path.join(current_path, "./images/pointer.png")) 
-pointer = Pointer(pointer_image, (screen_width // 2, 624))
+pointer = Pointer(pointer_image, (screen_width // 2, 624), 90)
 
 # 게임 관련 변수
 CELL_SIZE = 56
 BUBBLE_WIDTH = 56
 BUBBLE_HEIGHT = 62
+
+# 화살표 관련 변수
+# to_angle = 0 # 좌우 각도 정보
+# 키 이벤트가 들어오는 속도가 빠를 때를 대응하기 위해서 좌우의 각도 변수를 나눈다.
+to_angle_left = 0 # 좌측 각도 정보
+to_angle_right = 0 # 우측 각도 정보
+angle_speed = 1.5 # 1.5도씩 움직이게 된다.
+
 map = [] # 게임 맵
 bubble_group = pygame.sprite.Group()
 
@@ -125,8 +150,24 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+            # 방향키에 따른 이벤트 생성
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT: # 좌측키 -> 화살표 각도가 점점 증가함.
+                to_angle_left += angle_speed
+            elif event.key == pygame.K_RIGHT: # 우측키 -> 화살표 각도가 점점 감소함.
+                to_angle_right -= angle_speed
+        
+        # 위를 눌렀을 떄는 화살표의 이동이 멈춰야 하는 부분 설정.
+        if event.type == pygame.KEYUP:
+            # 좌측 혹은 우측 방향키에서 손을 때었을 때
+            if event.key == pygame.K_LEFT:
+                to_angle_left = 0
+            elif event.key == pygame.K_RIGHT:
+                to_angle_right = 0
+
     screen.blit(background, (0, 0))
     bubble_group.draw(screen)
+    pointer.rotate(to_angle_left + to_angle_right) # 발사대의 자연스러운 움직임을 위해서
     pointer.draw(screen)
     pygame.display.update()
 
