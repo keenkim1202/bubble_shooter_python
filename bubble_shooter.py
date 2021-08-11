@@ -141,6 +141,40 @@ def get_random_bubble_color():
                 colors.append(col)
     return random.choice(colors)
 
+# 충돌 처리 함수
+def process_collision():
+    global curr_bubble, fire
+    hit_bubble = pygame.sprite.spritecollideany(curr_bubble, bubble_group, pygame.sprite.collide_mask)
+
+    if hit_bubble:
+        row_idx, col_idx = get_map_index(*curr_bubble.rect.center) # (x, y)
+        print(row_idx, col_idx)
+        place_bubble(curr_bubble, row_idx, col_idx)
+        curr_bubble = None
+        fire = False
+
+# 맵에서의 위치정보를 가져오는 함수
+def get_map_index(x, y):
+    row_idx = y // CELL_SIZE
+    col_idx = x // CELL_SIZE
+
+    if row_idx % 2 == 1:
+        col_idx = (x - (CELL_SIZE // 2)) // CELL_SIZE
+
+        if col_idx < 0: # 버블이 화면을 조금 벗어난 상태에서 충돌한 경우.
+            col_idx = 0
+        elif col_idx > MAP_COL_COUNT - 2:
+            col_idx = MAP_COL_COUNT - 2
+
+    return row_idx, col_idx
+
+# 위치정보를 바탕으로 버블을 배치하는 함수
+def place_bubble(bubble, row_idx, col_idx):
+    map[row_idx][col_idx] = bubble.color
+    position = get_bubble_position(row_idx, col_idx)
+    bubble.set_rect(position)
+    bubble_group.add(bubble)
+
 pygame.init()
 
 screen_width = 448
@@ -173,6 +207,8 @@ pointer = Pointer(pointer_image, (screen_width // 2, 624), 90)
 CELL_SIZE = 56
 BUBBLE_WIDTH = 56
 BUBBLE_HEIGHT = 62
+MAP_ROW_COUNT = 11
+MAP_COL_COUNT = 8
 
 # 화살표 관련 변수
 to_angle_left = 0 # 좌측 각도 정보
@@ -220,6 +256,9 @@ while running:
 
     if not curr_bubble:
         prepare_bubbles()
+
+    if fire:
+        process_collision()
 
     screen.blit(background, (0, 0))
     bubble_group.draw(screen)
