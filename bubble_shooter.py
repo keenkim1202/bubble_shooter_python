@@ -22,7 +22,7 @@ class Bubble(pygame.sprite.Sprite):
         self.col_idx = col_idx
 
     def set_rect(self, position):
-        self.rect = self.image.get_rect(center=position)
+        self.rect = self.image.get_rect(center = position)
 
     def draw(self, screen, to_x = None):
         if to_x:
@@ -49,12 +49,16 @@ class Bubble(pygame.sprite.Sprite):
         self.row_idx = row_idx
         self.col_idx = col_idx
 
+    # 벽이 내려옴에 따라 버블도 같이 내리기
+    def drop_downward(self, height):
+        self.rect = self.image.get_rect(center = (self.rect.centerx, self.rect.centery + height))
+
 # 발사대 클래스 생성
 class Pointer(pygame.sprite.Sprite):
     def __init__(self, image, position, angle):
         super().__init__()
         self.image = image
-        self.rect = image.get_rect(center=position)
+        self.rect = image.get_rect(center = position)
         self.angle = angle
         self.original_image = image
         self.position = position
@@ -106,7 +110,7 @@ def setup():
 # 버블의 위치 정보를 구하는 함수
 def get_bubble_position(row_idx, col_idx):
     pos_x = col_idx * CELL_SIZE + (BUBBLE_WIDTH // 2)
-    pos_y = row_idx * CELL_SIZE + (BUBBLE_HEIGHT // 2)
+    pos_y = row_idx * CELL_SIZE + (BUBBLE_HEIGHT // 2) + wall_height
 
     if row_idx % 2 == 1:
         pos_x += CELL_SIZE // 2
@@ -160,7 +164,7 @@ def process_collision():
     global curr_bubble, fire, curr_fire_count
     hit_bubble = pygame.sprite.spritecollideany(curr_bubble, bubble_group, pygame.sprite.collide_mask)
 
-    if hit_bubble or curr_bubble.rect.top <= 0:
+    if hit_bubble or curr_bubble.rect.top <= wall_height:
         row_idx, col_idx = get_map_index(*curr_bubble.rect.center) # (x, y)
         print(row_idx, col_idx)
         place_bubble(curr_bubble, row_idx, col_idx)
@@ -171,7 +175,7 @@ def process_collision():
 
 # 맵에서의 위치정보를 가져오는 함수
 def get_map_index(x, y):
-    row_idx = y // CELL_SIZE
+    row_idx = (y - wall_height) // CELL_SIZE
     col_idx = x // CELL_SIZE
 
     if row_idx % 2 == 1:
@@ -261,6 +265,15 @@ def draw_bubbles():
 
     for bubble in bubble_group:
         bubble.draw(screen, to_x)
+     
+# 발사횟수를 다 소진하면 벽을 내리기
+def drop_wall():
+    global wall_height, curr_fire_count
+    wall_height += CELL_SIZE
+    
+    for bubble in bubble_group:
+        bubble.drop_downward(CELL_SIZE)
+        curr_fire_count = FIRE_COUNT
 
 pygame.init()
 
@@ -275,6 +288,7 @@ clock = pygame.time.Clock()
 # 배경 이미지 불러오기
 current_path = os.path.dirname(__file__)
 background = pygame.image.load(os.path.join(current_path, "./images/background.png"))
+wall = pygame.image.load(os.path.join(current_path, "./images/wall.png"))
 
 # 버블 이미지 불러오기
 bubble_images = [
@@ -307,6 +321,7 @@ curr_bubble = None # 이번에 쏠 버블
 next_bubble = None # 다음에 쏠 버블
 fire = False # 발사 여부 (현재 버블이 발사 중이면 발사되지 않도록하기 위해서.)
 curr_fire_count = FIRE_COUNT # 현재 남은 발사 횟수
+wall_height = 0 # 화면에 보여지는 벽의 높이
 
 map = [] # 게임 맵
 visited = []
@@ -349,8 +364,11 @@ while running:
     if fire:
         process_collision()
 
+    if curr_fire_count == 0:
+        drop_wall()
+
     screen.blit(background, (0, 0))
-    bubble_group.draw(screen)
+    screen.blit(wall, (0, wall_height - screen_height))
 
     draw_bubbles()
     pointer.rotate(to_angle_left + to_angle_right) # 발사대의 자연스러운 움직임을 위해서
