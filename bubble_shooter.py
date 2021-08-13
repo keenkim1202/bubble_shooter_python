@@ -1,11 +1,9 @@
 # !/usr/lcoal/bin/python
 # -*- coding:  utf-8 -*-
 
-# 벽 내리기
-# 총 7번의 기회가 주어지고, 
-# - 기회가 2번남으면 화면이 조금 흔들린다.
-# - 기회가 1번 남으면 화면이 많이 흔들린다.
-# - 기회를 다 쓰면 벽이 내려온다.
+# 게임 종료 처리
+# 성공 : 화면 내의 모든 버블이 사라지면
+# 실패 : 바닥에 정해진 높이보다 버블이 낮게 내려오면 실패
 import os, random, math
 import pygame
 from pygame import image
@@ -166,7 +164,6 @@ def process_collision():
 
     if hit_bubble or curr_bubble.rect.top <= wall_height:
         row_idx, col_idx = get_map_index(*curr_bubble.rect.center) # (x, y)
-        print(row_idx, col_idx)
         place_bubble(curr_bubble, row_idx, col_idx)
         remove_adjacent_bubbles(row_idx, col_idx, curr_bubble.color)
         curr_bubble = None
@@ -275,6 +272,22 @@ def drop_wall():
         bubble.drop_downward(CELL_SIZE)
         curr_fire_count = FIRE_COUNT
 
+# 가장 낮은 위치의 버블의 아래값을 얻기
+def get_lowest_bubble_bottom():
+    bubble_bottoms = [bubble.rect.bottom for bubble in bubble_group]
+    return max(bubble_bottoms)
+
+# 게임 실패 시, 모든 버블의 색깔을 검은색을 바꾸어주기
+def change_bubble_image(image):
+    for bubble in bubble_group:
+        bubble.image = image
+
+# 게임이 끝날을 때의 화면 그려주기
+def display_game_over():
+    txt_game_over = game_font.render(game_result, True, WHITE)
+    rect_game_over = txt_game_over.get_rect(center = (screen_width // 2, screen_height // 2))
+    screen.blit(txt_game_over, rect_game_over)
+
 pygame.init()
 
 screen_width = 448
@@ -287,7 +300,7 @@ clock = pygame.time.Clock()
 
 # 배경 이미지 불러오기
 current_path = os.path.dirname(__file__)
-background = pygame.image.load(os.path.join(current_path, "./images/background.png"))
+background_real = pygame.image.load(os.path.join(current_path, "./images/background_real.png"))
 wall = pygame.image.load(os.path.join(current_path, "./images/wall.png"))
 
 # 버블 이미지 불러오기
@@ -311,6 +324,7 @@ BUBBLE_HEIGHT = 62
 MAP_ROW_COUNT = 11
 MAP_COL_COUNT = 8
 FIRE_COUNT = 7 # 발사 가능 횟수 ( 벽이 내려오기 전까지 )
+WHITE = (255, 255, 255)
 
 # 화살표 관련 변수
 to_angle_left = 0 # 좌측 각도 정보
@@ -322,6 +336,10 @@ next_bubble = None # 다음에 쏠 버블
 fire = False # 발사 여부 (현재 버블이 발사 중이면 발사되지 않도록하기 위해서.)
 curr_fire_count = FIRE_COUNT # 현재 남은 발사 횟수
 wall_height = 0 # 화면에 보여지는 벽의 높이
+
+is_game_over = False
+game_font = pygame.font.SysFont("arialrounded", 40)
+game_result = None
 
 map = [] # 게임 맵
 visited = []
@@ -367,7 +385,15 @@ while running:
     if curr_fire_count == 0:
         drop_wall()
 
-    screen.blit(background, (0, 0))
+    if not bubble_group:
+        game_result = "Mission Complete"
+        is_game_over = True
+    elif get_lowest_bubble_bottom() > len(map) * CELL_SIZE:
+        game_result = "Game Over"
+        is_game_over = True
+        change_bubble_image(bubble_images[-1])
+
+    screen.blit(background_real, (0, 0))
     screen.blit(wall, (0, wall_height - screen_height))
 
     draw_bubbles()
@@ -381,7 +407,12 @@ while running:
 
     if next_bubble:
         next_bubble.draw(screen)
+    
+        if is_game_over:
+            display_game_over()
+            running = False
 
     pygame.display.update()
 
+pygame.time.delay(2000)
 pygame.quit()
